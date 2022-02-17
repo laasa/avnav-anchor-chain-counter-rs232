@@ -10,8 +10,7 @@ Addtionally it need the Up/Down information anchor winch relais.
 
 It is widely based on the
 - seatalk remote plugin (https://github.com/wellenvogel/avnav-seatalk-remote-plugin),
-- more nmea plugin      (https://github.com/kdschmidt1/avnav-more-nmea-plugin) and
-- Seatalk1 to NMEA 0183 (https://github.com/MatsA/seatalk1-to-NMEA0183/blob/master/STALK_read.py).
+- more nmea plugin      (https://github.com/kdschmidt1/avnav-more-nmea-plugin).
 
 # Parameter
 
