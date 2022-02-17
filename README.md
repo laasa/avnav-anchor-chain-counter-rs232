@@ -33,10 +33,6 @@ First tests are made with th module BUCCK_817_4_V1.0.
 The reed relais is a brought one:
 ![grafik](https://user-images.githubusercontent.com/98450191/153611712-e395b9f1-18e5-4b43-8a93-baecb4d1e036.png)
 
-All is connected via a 5-pin-socket
-![grafik](https://user-images.githubusercontent.com/98450191/153611586-a4600594-4ae2-44e7-8802-de87d67da222.png)
-
-
 # Software installation
 
 To install this plugin please 
