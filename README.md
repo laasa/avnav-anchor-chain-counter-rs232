@@ -1,12 +1,12 @@
 # avnav-anchor-chain-counter-rs232
-counts the anchor chain pulses via inputs DSR and CTS on serial line
+counts the anchor chain pulses via "inputs DSR" and CTS of an RS232 device (e.g. USB-to-RS232-device)
 
 ![grafik](https://user-images.githubusercontent.com/98450191/153689785-2802730f-096a-490d-aaaf-1e5c5fca7244.png)
 
 # General
 
 The plugin reads pulses from a reed relais on the anchor winch.
-Addtionally it need the Up/Down information anchor winch relais.
+Addtionally it need the Up (and Down) information of the anchor windlass relais.
 
 It is widely based on the
 - seatalk remote plugin (https://github.com/wellenvogel/avnav-seatalk-remote-plugin),
