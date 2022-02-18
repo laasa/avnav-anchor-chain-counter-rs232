@@ -29,7 +29,7 @@ class Plugin:
     {
       'name': 'circumference',
       'description': 'Define the circumference of anchor winch im [mm] (default: 30)',
-      'default': '30'
+      'default': '0.30'
     },
   ]
   @classmethod
@@ -150,20 +150,25 @@ class Plugin:
     connectionHandler=threading.Thread(target=self.handleConnection, name='seatalk-remote-connection')
     connectionHandler.setDaemon(True)
     connectionHandler.start()
+
+    lastAnchorChainValue = -1.0
+
     while changeSequence == self.changeSequence:
       #if not self.isConnected:
         #return {'status': 'not connected'}
       source='internal'
 
-      lastAnchorChainValue = -1.0
       try:
         if (lastAnchorChainValue != self.anchorChainValue):
           self.api.addData(self.PATHACV, self.anchorChainValue, source=source)
+        lastAnchorChainValue = self.anchorChainValue
 
       except Exception as e:
         self.anchorChainValue = 0.0
         self.api.addData(self.PATHACV, self.anchorChainValue, source=source)
         pass
+
+      time.sleep(0.2)
 
   def handleConnection(self):
     changeSequence=self.changeSequence
@@ -192,21 +197,29 @@ class Plugin:
           p = struct.pack('I', 0)
           lastFlags = fcntl.ioctl(self.fd, termios.TIOCMGET, p)
           lastFlags = struct.unpack('I', lastFlags)[0]
+          penalty = 0
+
 
           while True:
             p = struct.pack('I', 0)
             flags = fcntl.ioctl(self.fd, termios.TIOCMGET, p)
             flags = struct.unpack('I', flags)[0]
+
             if ( flags & termios.TIOCM_DSR ):
               if ( (lastFlags & termios.TIOCM_DSR) == 0):
+                  # 250 ms panalty (50*0.005) 
                 if(int(self.debuglevel) > 0):
                   self.api.log("DSR rising edge")
                 if ( flags & termios.TIOCM_CTS ):
-                  self.anchorChainValue += self.circumference
+                  self.anchorChainValue += float(self.circumference)
                 else:
-                  self.anchorChainValue -= self.circumference
+                  self.anchorChainValue -= float(self.circumference)
+                  if (self.anchorChainValue < 0):
+                    self.anchorChainValue = 0
+
             lastFlags = flags
-            time.sleep(0.01)
+
+            time.sleep(0.005)
 
         except Exception as e:
           if not errorReported:
