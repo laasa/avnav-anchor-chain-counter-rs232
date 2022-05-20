@@ -31,6 +31,16 @@ class Plugin:
       'description': 'Define the circumference of anchor winch im [mm] (default: 30)',
       'default': '0.30'
     },
+    {
+      'name': 'withoutpulses',
+      'description': 'mode without pulse (default: 0)',
+      'default': '0'
+    },
+    {
+      'name': 'meter_per_second',
+      'description': 'meter per second (default: 0)',
+      'default': '0.30'
+    },
   ]
   @classmethod
   def pluginInfo(cls):
@@ -70,7 +80,9 @@ class Plugin:
     self.device=None
     self.debuglevel=None
     self.circumference=0.30
-    self.anchorChainValue = 0.0
+    self.anchorChainValue = 10.0
+    self.withoutpulses=0
+    self.meter_per_second=0.3
     self.isBusy=False
     self.condition=threading.Condition()
     if hasattr(self.api,'registerEditableParameters'):
@@ -127,6 +139,9 @@ class Plugin:
     try:
       self.device=self.getConfigValue('device')
       self.debuglevel=self.getConfigValue('debuglevel')
+      self.circumference=self.getConfigValue('circumference')
+      self.withoutpulses=self.getConfigValue('withoutpulses')
+      self.meter_per_second=self.getConfigValue('meter_per_second')
       usbid=self.getConfigValue('usbid')
       if usbid == '':
         usbid=None
@@ -147,7 +162,7 @@ class Plugin:
       self.api.setStatus("STARTED", "using usbid %s, baud=4800" % (usbid))
     else:
       self.api.setStatus("STARTED","using device %s, baud=4800"%(self.device))
-    connectionHandler=threading.Thread(target=self.handleConnection, name='seatalk-remote-connection')
+    connectionHandler=threading.Thread(target=self.handleConnection, name='anchor-chain-counter-rs232')
     connectionHandler.setDaemon(True)
     connectionHandler.start()
 
@@ -198,16 +213,45 @@ class Plugin:
           lastFlags = fcntl.ioctl(self.fd, termios.TIOCMGET, p)
           lastFlags = struct.unpack('I', lastFlags)[0]
           penalty = 0
-
+          RTS_starttime = CTS_starttime = time.time()
 
           while True:
             p = struct.pack('I', 0)
             flags = fcntl.ioctl(self.fd, termios.TIOCMGET, p)
             flags = struct.unpack('I', flags)[0]
 
-            if ( flags & termios.TIOCM_DSR ):
+            if(self.withoutpulses):
+             # mode without pulses
+             if ( flags & termios.TIOCM_CTS ):
+              # UP on CTS
+              if ( (lastFlags & termios.TIOCM_CTS) == 0):
+               CTS_starttime = time.time()
+
+              now = time.time()
+              difference = now - CTS_starttime
+              CTS_starttime = now
+              self.anchorChainValue += (float(self.meter_per_second) * float(difference))
+              if (self.anchorChainValue < 0):
+               self.anchorChainValue = 0
+
+             else:
+              if ( flags & termios.TIOCM_RTS ):
+               # DOWN on RTS
+               if ( (lastFlags & termios.TIOCM_RTS) == 0):
+                RTS_starttime = time.time()
+
+               now = time.time()
+               difference = now - RTS_starttime
+               RTS_starttime = now
+               self.anchorChainValue -= (float(self.meter_per_second) * float(difference))
+               if (self.anchorChainValue < 0):
+                self.anchorChainValue = 0
+
+            else:
+             # mode with pulses
+             if ( flags & termios.TIOCM_DSR ):
               if ( (lastFlags & termios.TIOCM_DSR) == 0):
-                  # 250 ms panalty (50*0.005) 
+                  # 250 ms penalty (50*0.005) 
                 if(int(self.debuglevel) > 0):
                   self.api.log("DSR rising edge")
                 if ( flags & termios.TIOCM_CTS ):
@@ -229,3 +273,4 @@ class Plugin:
           self.isConnected=False
           time.sleep(1)
       time.sleep(1)
+      
